@@ -68,7 +68,7 @@ split_boot() {
   local splitfail;
 
   if [ ! -e "$(echo "$BLOCK" | cut -d\  -f1)" ]; then
-    abort "Invalid partition. Aborting...";
+    abort "[!] Invalid partition. Aborting...";
   fi;
   if echo "$BLOCK" | grep -q ' '; then
     BLOCK=$(echo "$BLOCK" | cut -d\  -f1);
@@ -82,7 +82,7 @@ split_boot() {
     dd if=$BLOCK of=$BOOTIMG $CUSTOMDD;
   fi;
   if [ $? != 0 ]; then
-    abort "Dumping image failed. Aborting...";
+    abort "[!] Dumping image failed. Aborting...";
   fi;
 
   mkdir -p $SPLITIMG;
@@ -136,7 +136,7 @@ split_boot() {
   fi;
 
   if [ $? != 0 -o "$splitfail" ]; then
-    abort "Splitting image failed. Aborting...";
+    abort "[!] Splitting image failed. Aborting...";
   fi;
   cd $AKHOME;
 }
@@ -157,7 +157,7 @@ unpack_ramdisk() {
   if [ -f ramdisk.cpio ]; then
     comp=$(magiskboot decompress ramdisk.cpio 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
   else
-    abort "No ramdisk found to unpack. Aborting...";
+    abort "[!] No ramdisk found to unpack. Aborting...";
   fi;
   if [ "$comp" ]; then
     mv -f ramdisk.cpio ramdisk.cpio.$comp;
@@ -175,7 +175,7 @@ unpack_ramdisk() {
   cd $RAMDISK;
   EXTRACT_UNSAFE_SYMLINKS=1 cpio -d -F $SPLITIMG/ramdisk.cpio -i;
   if [ $? != 0 -o ! "$(ls)" ]; then
-    abort "Unpacking ramdisk failed. Aborting...";
+    abort "[!] Unpacking ramdisk failed. Aborting...";
   fi;
   if [ -d "$AKHOME/rdtmp" ]; then
     cp -af $AKHOME/rdtmp/* .;
@@ -195,7 +195,7 @@ repack_ramdisk() {
 
   cd $AKHOME;
   if [ "$RAMDISK_COMPRESSION" != "auto" ] && [ "$(grep HEADER_VER $SPLITIMG/infotmp | sed -n 's;.*\[\(.*\)\];\1;p')" -gt 3 ]; then
-    ui_print " " "Warning: Only lz4-l ramdisk compression is allowed with hdr v4+ images. Resetting to auto...";
+    ui_print " " "[~] Warning: Only lz4-l ramdisk compression is allowed with hdr v4+ images. Resetting to auto...";
     RAMDISK_COMPRESSION=auto;
   fi;
   case $RAMDISK_COMPRESSION in
@@ -232,7 +232,7 @@ repack_ramdisk() {
     fi;
   fi;
   if [ "$packfail" ]; then
-    abort "Repacking ramdisk failed. Aborting...";
+    abort "[!] Repacking ramdisk failed. Aborting...";
   fi;
 
   if [ -f "$BIN/mkmtkhdr" -a -f "$SPLITIMG/boot.img-base" ]; then
@@ -327,7 +327,7 @@ flash_boot() {
           magisk_patched=$?;
         fi;
         if [ "$magisk_patched" -eq 1 ]; then
-          ui_print " " "Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
+          ui_print " " "[~] Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
           comp=$(magiskboot decompress kernel 2>&1 | grep -vE 'raw|zimage' | sed -n 's;.*\[\(.*\)\];\1;p');
           (magiskboot split $kernel || magiskboot decompress $kernel kernel) >&2;
           if [ $? != 0 -a "$comp" ] && $comp --help 2>/dev/null; then
@@ -358,7 +358,7 @@ flash_boot() {
             [ -f $fdt ] && magiskboot dtb $fdt patch; # remove dtb verity/avb
           done;
         elif [ -d /data/data/me.weishu.kernelsu ] && [ "$(file_getprop $AKHOME/anykernel.sh do.modules)" == 1 ] && [ "$(file_getprop $AKHOME/anykernel.sh do.systemless)" == 1 ]; then
-          ui_print " " "KernelSU detected! Setting up for kernel helper module...";
+          ui_print " " "[~] KernelSU detected! Setting up for kernel helper module...";
           comp=$(magiskboot decompress kernel 2>&1 | grep -vE 'raw|zimage' | sed -n 's;.*\[\(.*\)\];\1;p');
           (magiskboot split $kernel || magiskboot decompress $kernel kernel) >&2;
           if [ $? != 0 -a "$comp" ] && $comp --help 2>/dev/null; then
@@ -369,9 +369,9 @@ flash_boot() {
           if grep -q -E '^/data/adb/ksud$' stringstmp; then
             touch $AKHOME/kernelsu_patched;
             grep -E -m1 'Linux version.*#' stringstmp > $AKHOME/vertmp;
-            [ -d $RAMDISK/overlay.d ] && ui_print " " "Warning: overlay.d detected in ramdisk but not currently supported by KernelSU!";
+            [ -d $RAMDISK/overlay.d ] && ui_print " " "[~] Warning: overlay.d detected in ramdisk but not currently supported by KernelSU!";
           else
-            ui_print " " "Warning: No KernelSU support detected in kernel!";
+            ui_print " " "[~] Warning: No KernelSU support detected in kernel!";
           fi;
           rm -f stringstmp;
           if [ "$comp" ]; then
@@ -401,7 +401,7 @@ flash_boot() {
     magiskboot repack $nocompflag $BOOTIMG $AKHOME/boot-new.img;
   fi;
   if [ $? != 0 ]; then
-    abort "Repacking image failed. Aborting...";
+    abort "[!] Repacking image failed. Aborting...";
   fi;
   [ "$PATCHVBMETAFLAG" ] && unset PATCHVBMETAFLAG;
   [ -f .magisk ] && touch $AKHOME/magisk_patched;
@@ -434,14 +434,14 @@ flash_boot() {
     fi;
   fi;
   if [ $? != 0 -o "$signfail" ]; then
-    abort "Signing image failed. Aborting...";
+    abort "[!] Signing image failed. Aborting...";
   fi;
   mv -f boot-new-signed.img boot-new.img 2>/dev/null;
 
   if [ ! -f boot-new.img ]; then
-    abort "No repacked image found to flash. Aborting...";
+    abort "[!] No repacked image found to flash. Aborting...";
   elif [ "$(wc -c < boot-new.img)" -gt "$(wc -c < boot.img)" ]; then
-    abort "New image larger than target partition. Aborting...";
+    abort "[!] New image larger than target partition. Aborting...";
   fi;
   blockdev --setrw $BLOCK 2>/dev/null;
   if [ -f "$BIN/flash_erase" -a -f "$BIN/nandwrite" ]; then
@@ -454,7 +454,7 @@ flash_boot() {
     cat boot-new.img /dev/zero > $BLOCK 2>/dev/null || true;
   fi;
   if [ $? != 0 ]; then
-    abort "Flashing image failed. Aborting...";
+    abort "[!] Flashing image failed. Aborting...";
   fi;
 }
 
@@ -480,19 +480,19 @@ flash_generic() {
       done;
     done;
     if [ ! "$imgblock" ]; then
-      abort "$1 partition could not be found. Aborting...";
+      abort "[!] $1 partition could not be found. Aborting...";
     fi;
     if [ ! "$NO_BLOCK_DISPLAY" ]; then
-      ui_print " " "$imgblock";
+      ui_print " " "[+] $imgblock";
     fi;
     if [ "$path" == "/dev/block/mapper" ]; then
       avb=$(httools_static avb $1);
-      [ $? == 0 ] || abort "Failed to parse fstab entry for $1. Aborting...";
+      [ $? == 0 ] || abort "[!] Failed to parse fstab entry for $1. Aborting...";
       if [ "$avb" ] && [ ! "$NO_VBMETA_PARTITION_PATCH" ]; then
         flags=$(httools_static disable-flags);
-        [ $? == 0 ] || abort "Failed to parse top-level vbmeta. Aborting...";
+        [ $? == 0 ] || abort "[!] Failed to parse top-level vbmeta. Aborting...";
         if [ "$flags" == "enabled" ]; then
-          ui_print " " "dm-verity detected! Patching $avb...";
+          ui_print " " "[~] dm-verity detected! Patching $avb...";
           for avbpath in /dev/block/mapper /dev/block/by-name /dev/block/bootdevice/by-name; do
             for file in $avb $avb$SLOT; do
               if [ -e $avbpath/$file ]; then
@@ -502,7 +502,7 @@ flash_generic() {
             done;
           done;
           cd $BIN;
-          httools_static patch $1 $AKHOME/$img $avbblock || abort "Failed to patch $1 on $avb. Aborting...";
+          httools_static patch $1 $AKHOME/$img $avbblock || abort "[!] Failed to patch $1 on $avb. Aborting...";
           cd $AKHOME;
         fi
       fi
@@ -510,7 +510,7 @@ flash_generic() {
       if [ "$imgsz" != "$(wc -c < $imgblock)" ]; then
         if [ -d /postinstall/tmp -a "$SLOT_SELECT" == "inactive" ]; then
           echo "Resizing $1$SLOT snapshot..." >&2;
-          snapshotupdater_static update $1 $imgsz || abort "Resizing $1$SLOT snapshot failed. Aborting...";
+          snapshotupdater_static update $1 $imgsz || abort "[!] Resizing $1$SLOT snapshot failed. Aborting...";
         else
           echo "Removing any existing $1_ak3..." >&2;
           lptools_static remove $1_ak3;
@@ -519,26 +519,26 @@ flash_generic() {
           echo "Attempting to create $1_ak3..." >&2;
           if lptools_static create $1_ak3 $imgsz; then
             echo "Replacing $1$SLOT with $1_ak3..." >&2;
-            lptools_static unmap $1_ak3 || abort "Unmapping $1_ak3 failed. Aborting...";
-            lptools_static map $1_ak3 || abort "Mapping $1_ak3 failed. Aborting...";
-            lptools_static replace $1_ak3 $1$SLOT || abort "Replacing $1$SLOT failed. Aborting...";
+            lptools_static unmap $1_ak3 || abort "[!] Unmapping $1_ak3 failed. Aborting...";
+            lptools_static map $1_ak3 || abort "[!] Mapping $1_ak3 failed. Aborting...";
+            lptools_static replace $1_ak3 $1$SLOT || abort "[!] Replacing $1$SLOT failed. Aborting...";
             imgblock=/dev/block/mapper/$1_ak3;
-            ui_print " " "Warning: $1$SLOT replaced in super. Reboot before further logical partition operations.";
+            ui_print " " "[~] Warning: $1$SLOT replaced in super. Reboot before further logical partition operations.";
           else
             echo "Creating $1_ak3 failed. Attempting to resize $1$SLOT..." >&2;
-            httools_static umount $1 || abort "Unmounting $1 failed. Aborting...";
+            httools_static umount $1 || abort "[!] Unmounting $1 failed. Aborting...";
             if [ -e $path/$1-verity ]; then
-              lptools_static unmap $1-verity || abort "Unmapping $1-verity failed. Aborting...";
+              lptools_static unmap $1-verity || abort "[!] Unmapping $1-verity failed. Aborting...";
             fi
-            lptools_static unmap $1$SLOT || abort "Unmapping $1$SLOT failed. Aborting...";
-            lptools_static resize $1$SLOT $imgsz || abort "Resizing $1$SLOT failed. Aborting...";
-            lptools_static map $1$SLOT || abort "Mapping $1$SLOT failed. Aborting...";
+            lptools_static unmap $1$SLOT || abort "[!] Unmapping $1$SLOT failed. Aborting...";
+            lptools_static resize $1$SLOT $imgsz || abort "[!] Resizing $1$SLOT failed. Aborting...";
+            lptools_static map $1$SLOT || abort "[!] Mapping $1$SLOT failed. Aborting...";
             isunmounted=1;
           fi
         fi
       fi
     elif [ "$(wc -c < $img)" -gt "$(wc -c < $imgblock)" ]; then
-      abort "New $1 image larger than $1 partition. Aborting...";
+      abort "[!] New $1 image larger than $1 partition. Aborting...";
     fi;
     isro=$(blockdev --getro $imgblock 2>/dev/null);
     blockdev --setrw $imgblock 2>/dev/null;
@@ -552,13 +552,13 @@ flash_generic() {
       cat $img /dev/zero > $imgblock 2>/dev/null || true;
     fi;
     if [ $? != 0 ]; then
-      abort "Flashing $1 failed. Aborting...";
+      abort "[!] Flashing $1 failed. Aborting...";
     fi;
     if [ "$isro" != 0 ]; then
       blockdev --setro $imgblock 2>/dev/null;
     fi;
     if [ "$isunmounted" -a "$path" == "/dev/block/mapper" ]; then
-      httools_static mount $1 || abort "Mounting $1 failed. Aborting...";
+      httools_static mount $1 || abort "[!] Mounting $1 failed. Aborting...";
     fi
     touch ${1}_flashed;
   fi;
@@ -852,7 +852,7 @@ setup_ak() {
         esac;
       fi;
       if [ ! "$SLOT" -a "$IS_SLOT_DEVICE" == 1 ]; then
-        abort "Unable to determine active slot. Aborting...";
+        abort "[!] Unable to determine active slot. Aborting...";
       fi;
     ;;
   esac;
@@ -915,7 +915,7 @@ setup_ak() {
             if [ "$mtdpart" == "$part" ]; then
               mtdname=$(echo "$mtdmount" | cut -d: -f1);
             else
-              abort "Unable to determine mtd $BLOCK partition. Aborting...";
+              abort "[!] Unable to determine mtd $BLOCK partition. Aborting...";
             fi;
             [ -e /dev/mtd/$mtdname ] && target=/dev/mtd/$mtdname;
           elif [ -e /dev/block/by-name/$part ]; then
@@ -937,10 +937,10 @@ setup_ak() {
   if [ "$target" ]; then
     BLOCK=$(ls $target 2>/dev/null);
   else
-    abort "Unable to determine $BLOCK partition. Aborting...";
+    abort "[!] Unable to determine $BLOCK partition. Aborting...";
   fi;
   if [ ! "$NO_BLOCK_DISPLAY" ]; then
-    ui_print "$BLOCK";
+    ui_print "[+] $BLOCK";
   fi;
   
   # allow multi-partition ramdisk modifying configurations (using reset_ak)
