@@ -7,7 +7,7 @@ properties() { '
 kernel.string=ExampleKernel by Not a Dude @ xda-developers
 do.devicecheck=1
 do.modules=1
-do.systemless=1
+do.systemless=0
 do.cleanup=1
 do.cleanuponabort=0
 device.name1=miatoll
